@@ -1,0 +1,27 @@
+centos安装配置mpich3.0
+第一步:创建cluster用户
+第二步:设置无密码登陆
+第三步:下载压缩包
+第四步:在cluster用户主目录解压并更改文件夹名称
+第五步安装在cluster用户主目录的另一个文件夹中
+---------------------------------------------
+.configure --prefix=dir
+make
+make install
+---------------------------------------------
+第六步:修改环境变量
+---------------------------------------------
+vi .bashrc
+#vi environment
+#添加如下几行
+export PATH=$PATH:/home/cluster/mpich/bin
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home\
+\/cluster/mpich/lib
+---------------------------------------------
+第七步:编写machinefile文件
+---------------------------------------------
+#vi environment
+#ip address:processing
+node1:2
+node2:2
+---------------------------------------------
