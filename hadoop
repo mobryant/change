@@ -1,0 +1,167 @@
+hadoop 集群配置安装(centos)
+第一步:安装jdk
+1、删除系统自带的所有版本的jdk
+------------------------------------------------------------------
+yum remove java-1.8.0-openjdk*
+yum remove java-1.7.0-openjdk*
+------------------------------------------------------------------
+2、安装最新版本jdk
+------------------------------------------------------------------
+yum install java-1.8.0-openjdk*
+------------------------------------------------------------------
+第二步:修改主机名
+对于centos7来说，需要修改两部分:/etc/hosts和/etc/hostname，假设我们
+有两个节点，分别命名为master和slave
+ip1:master
+ip2:slave
+1、修改/etc/hostname(ip1)
+------------------------------------------------------------------
+vi /etc/hostname
+#vi environment
+master
+------------------------------------------------------------------
+同样可以修改/etc/hostname(ip2)
+------------------------------------------------------------------
+vi /etc/hostname
+#vi environment
+slave
+------------------------------------------------------------------
+2、修改/etc/hosts(ip1)
+------------------------------------------------------------------
+vi /etc/hosts
+#vi environment(添加两行[因为共有两个节点])
+ip1 master master.localdomain
+ip2 slave slave.localdomain
+------------------------------------------------------------------
+同样可以修改/etc/hostname(ip2)，并重启
+------------------------------------------------------------------
+reboot
+------------------------------------------------------------------
+第三步:创建hadoop用户
+1、创建用户(ip1)
+------------------------------------------------------------------
+usradd hadoop
+passwd hadoop
+#input passwd
+------------------------------------------------------------------
+2、创建用户(ip2)
+------------------------------------------------------------------
+-------------------------------------------------------------------
+第四步:主机间ssh免密码登陆
+原理：每个主机产生公钥，复制到所有结点的authorized_keys
+------------------------------------------------------------------
+cd /home/hadoop/.ssh(hadoop@master)
+ssh-keygen -t rsa                                  #产生公钥、私钥
+cat idrsa.pub>>authorized_keys#将公钥复制到authorized_keys(master)
+ssh master           #已经可以实现无密码登陆本机，通过这个命令测试
+scp authorized_keys hadoop@slave:~/.ssh  #已经能够实现master无密码
+ssh slave                             #登陆slave，通过这个命令测试
+
+cd /home/hadoop/.ssh(hadoop@slave)
+ssh-keygen -t rsa
+cat idrsa.pub>>authorized_keys         #已经可以实现无密码登陆本机
+scp authorized_keys hadoop@master:~/.ssh #已经能够实现slave无密码
+ssh master                           #登陆master，通过这个命令测试
+------------------------------------------------------------------
+第五步:在每个结点的hadoop用户中下载解压hadoop.tar.gz
+第六步:配置hadoop
+------------------------------------------------------------------
+/home/hadoop/etc/hadoop/hadoop-env.sh
+#增加java安装路径
+export JAVA_HOME=$(your java dir)
+------------------------------------------------------------------
+/home/hadoop/etc/hadoop/core-site.xml
+#vi environment
+<configuration>
+    <property>
+        <name>fs.default.name</name> <!--你的hadoop主结点-->
+        <value>hdfs://master:9000</value>
+    </property>
+    <property>
+        <name>hadoop.tmp.dir</name><!--hadoop默认临时路径-->
+        <value>/home/hadoop/tmp</value>
+    </property>
+</configuration>
+------------------------------------------------------------------
+/home/hadoop/etc/hadoop/mapred.xml
+#vi environment
+<configuration>
+    <property>
+        <name>mapred.job.tracker</name><!--master的jobtracker-->
+        <value>hdfs://master:9001</value>
+    </property>
+</configuration>
+-------------------------------------------------------------------
+/home/hadoop/etc/hadoop/hdfs-site.xml
+#vi environment
+<configuration>
+    <property>
+        <name>dfs.replication</name><!--slave的个数-->
+        <value>1</value>
+    </property>
+    <property>
+        <name>dfs.namenode.name.dir</name><!--namenode存放数据的
+                                              本地文件夹-->
+        <value>file:/home/hadoop/tmp/dfs/name</value>
+    </property>
+    <property>
+        <name>dfs.datanode.data.dir</name><!--datanode存放数据的
+                                              本地文件夹-->
+        <value>file:/home/hadoop/tmp/dfs/data</value>
+    </property>
+---------------------------------------------------------------------
+/home/hadoop/etc/hadoop/slaves
+#vi environment
+slave
+---------------------------------------------------------------------
+</configuration>
+第七步:格式化namenode 
+1、关闭所有机器的防火墙
+---------------------------------------------------------------------
+systemctl stop firewalld
+---------------------------------------------------------------------
+2、格式化
+---------------------------------------------------------------------
+/home/hadoop/bin/hadoop namenode -format
+---------------------------------------------------------------------
+第八步:启动集群
+---------------------------------------------------------------------
+/home/hadoop/sbin/start-all.sh
+---------------------------------------------------------------------
+异常文件在所有机器的logs中，可以根据logs消除错误
+---------------------------------------------------------------------
+hadoop基本操作
+/home/hadoop/bin/hadoop fs -commond
+commond:
+ls --list hdfs directory
+put --put local to hdfs
+rm --remove file
+rmr --recursive remove files
+dfsadmin -safemode leave --leave safemode
+dfsadmin -safeode enter --enter sagemode
+cat --display file
+---------------------------------------------------------------------
+利用hadoop streaming 用python脚本开发hadoop
+/home/hadoop/bin hadoop -jar /home/hadoop/share/hadoop/tools/lib/hadoop\
+\streaming.*.jar -input $(file from hdfs) -output $(file for out) -mapper\
+\$(mapper.py from local) -reducer $(reducer.py from local)
+----------------------------------------------------------------------
+#mapper.py
+import sys
+for line in sys.stdin:
+    line=line.strip()
+    words=line.split()
+    for word in words:
+	print "%s\t%s" %(word,1)
+
+#reducer.py
+import sys
+wordcount={}
+for line in sys.stdin:
+    word,count=line.split()
+    try:
+	wordcount[word]+=int(count)
+    except IndexError:
+	wordcount[word]=int(count)
+print wordcount
+----------------------------------------------------------------------

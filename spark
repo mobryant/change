@@ -1,0 +1,45 @@
+在hadoop基础上安装spark
+第一步:在hadoop用户中下载解压scala和spark并加入系统路径
+-------------------------------------------------------
+vi /etc/profile
+-------------------------------------------------------
+export SCALA_HOME=/home/hadoop/scala
+export PATH=$PATH:/home/hadoop/scala/bin
+export SPARK_HOME=/home/hadoop/spark
+export PATH=$PATH:/home/hadoop/spark/bin
+-------------------------------------------------------
+source /etc/profile
+-------------------------------------------------------
+第二步:配置spark
+/home/hadoop/spark/conf/spark-env.sh
+-------------------------------------------------------
+export SCALA_HOME=/home/hadoop/scala
+
+export HADOOP_HOME=/home/hadoop/hadoop
+
+export JAVA_HOME=$(your java home)
+
+export HADOOP_CONF_DIR=/home/hadoop/etc/hadoop
+
+export SPARK_HOME=/home/hadoop/spark
+
+export SPARK_MASTER_IP=master
+
+export SPARK_EXECUTOR_MEMORY=1G
+-------------------------------------------------------
+/home/hadoop/spark/conf/slaves
+-------------------------------------------------------
+slave
+-------------------------------------------------------
+第三步:启动hadoop和spark
+/home/hadoop/sbin/start-all.sh
+/home/hadoop/spark/sbin/start-all.sh
+设置pyspark为ipython模式
+-------------------------------------------------------
+/home/spark/pyspark
+# Default to standard python interpreter unless told otherwise
+if [[ -z "$PYSPARK_DRIVER_PYTHON" ]]; then
+  PYSPARK_DRIVER_PYTHON="${PYSPARK_PYTHON:-"ipython"}"
+fi
+
+-------------------------------------------------------
